@@ -1,0 +1,13 @@
+{
+  "name": "CuboFácil",
+  "short_name": "CuboFácil",
+  "description": "Aprende a resolver el cubo de Rubik 3x3 con el método por capas.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B0F1A",
+  "theme_color": "#0B0F1A",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

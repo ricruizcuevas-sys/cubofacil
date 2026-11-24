@@ -1,0 +1,11 @@
+{
+  "name": "cubofacil",
+  "version": "1.0.0",
+  "description": "Aprende a resolver el cubo de Rubik 3x3 con el método por capas para principiantes.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

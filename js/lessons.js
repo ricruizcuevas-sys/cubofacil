@@ -1,0 +1,137 @@
+// What each lesson teaches: the general method, valid for any cube.
+import { ALG } from "./solver.js";
+
+export const LESSONS = [
+  {
+    title: "Cruz blanca",
+    goal: "Hacer una cruz blanca abajo: las cuatro aristas blancas alrededor del centro blanco, y cada una con su otro color igual al centro de su lado.",
+    hold: "Durante todo el curso, el centro amarillo va arriba y el blanco abajo. Los centros nunca se mueven: dicen de qué color es cada cara. En esta lección la pantalla enseña el cubo un poco desde abajo, para que veas la cara blanca.",
+    method: [
+      "Elige una arista blanca (una pieza con blanco y otro color). Gira el cubo entero para tener delante la cara de ese otro color.",
+      "Lleva la arista a la capa de arriba y gira esa capa hasta que quede justo encima de su centro.",
+      "Bájala a su sitio según hacia dónde mire el blanco (mira los casos).",
+      "Repite con las otras tres aristas. Cada vez, comprueba que las que ya estaban siguen bien.",
+    ],
+    cases: [
+      { id: "arriba-blanco-arriba", name: "Arriba, con el blanco mirando hacia arriba", how: "Ponla encima de su centro y gira la cara de delante dos veces." },
+      { id: "arriba-blanco-lado", name: "Arriba, con el blanco mirando hacia delante", how: "Ponla encima de su centro y haz: arriba a la derecha, derecha abajo, delante como el reloj, derecha arriba." },
+      { id: "medio", name: "En la capa del medio", how: "Súbela: gira la cara de su lado, la capa de arriba una vez, y devuelve la cara a su sitio." },
+      { id: "abajo", name: "Abajo, pero mal puesta", how: "Súbela girando esa cara dos veces y trátala como una de arriba." },
+    ],
+    algs: [{ name: "Blanco hacia delante", moves: ["U'", "R'", "F", "R"] }],
+    tip: "La cruz se hace pensando, no de memoria: con práctica la verás sola.",
+    done: "Hay una cruz blanca abajo y cada arista coincide con el centro de su lado.",
+  },
+  {
+    title: "Esquinas blancas",
+    goal: "Completar la cara blanca: cada esquina blanca entre sus tres colores. Así termina la primera capa.",
+    hold: "Pon delante la cara de uno de los colores de la esquina, con el sitio de la esquina abajo a la derecha. La pantalla enseña el cubo un poco desde abajo para que veas la cara blanca.",
+    method: [
+      "Busca arriba una esquina con blanco. Mira sus otros dos colores: su sitio está entre esos dos centros, abajo.",
+      "Gira la capa de arriba hasta que la esquina quede justo encima de su sitio (arriba, delante a la derecha).",
+      "Repite el algoritmo hasta que la esquina baje bien colocada: una vez si el blanco mira a la derecha, tres si mira arriba y cinco si mira hacia delante.",
+      "Si una esquina blanca está abajo pero mal, ponla delante a la derecha y haz el algoritmo una vez para subirla.",
+    ],
+    cases: [
+      { id: "blanco-derecha", name: "El blanco mira a la derecha", how: "Una vez el algoritmo." },
+      { id: "blanco-delante", name: "El blanco mira hacia delante", how: "Cinco veces el algoritmo." },
+      { id: "blanco-arriba", name: "El blanco mira hacia arriba", how: "Tres veces el algoritmo." },
+      { id: "abajo", name: "Abajo, pero mal puesta", how: "Ponla delante a la derecha y haz el algoritmo una vez para sacarla arriba." },
+    ],
+    algs: [{ name: "El «cuatro»", moves: ALG.sexy, trick: "Derecha sube, arriba va a la izquierda, derecha baja, arriba vuelve. Es el algoritmo más importante del cubo." }],
+    tip: "No te preocupes si lo de arriba se desordena: aún no lo hemos hecho.",
+    done: "La cara blanca está completa y la primera fila de cada lado tiene un solo color.",
+  },
+  {
+    title: "Segunda capa",
+    goal: "Colocar las cuatro aristas de la capa del medio. Con eso quedan hechas dos capas.",
+    hold: "Pon el cubo con el blanco abajo. Trabajarás con una arista de arriba que no tenga amarillo.",
+    method: [
+      "Busca arriba una arista sin amarillo.",
+      "Gira la capa de arriba hasta que su color de delante coincida con el centro de delante: se forma una «T» invertida de un color.",
+      "Mira su color de arriba: si es el del centro de la derecha, va a la derecha; si es el de la izquierda, va a la izquierda.",
+      "Haz el algoritmo de ese lado. Repite con las demás.",
+      "Si no queda ninguna arista sin amarillo arriba pero alguna del medio está mal, haz el algoritmo de la derecha en ese sitio para sacarla.",
+    ],
+    cases: [
+      { id: "derecha", name: "Va a la derecha", how: "Algoritmo de la derecha." },
+      { id: "izquierda", name: "Va a la izquierda", how: "Algoritmo de la izquierda (es el de la derecha, como en un espejo)." },
+      { id: "atascada", name: "Atascada en el medio, mal puesta", how: "Ponla delante a la derecha y haz el algoritmo de la derecha para sacarla." },
+    ],
+    algs: [
+      { name: "A la derecha", moves: ALG.right, trick: "Primero te alejas (arriba a la izquierda), metes la derecha y luego arreglas delante." },
+      { name: "A la izquierda", moves: ALG.left, trick: "Igual que el de la derecha, pero como en un espejo." },
+    ],
+    tip: "Si la arista no coincide con su centro de delante, gira solo la capa de arriba: nunca el cubo entero.",
+    done: "Las dos primeras capas están completas en todos los lados.",
+  },
+  {
+    title: "Cruz amarilla",
+    goal: "Hacer una cruz amarilla en la cara de arriba (aún no importa el color de los lados).",
+    hold: "Amarillo arriba. Mira solo las aristas de la cara de arriba: forman un punto, una «L», una línea o ya la cruz.",
+    method: [
+      "Mira la cara de arriba e identifica el dibujo: punto, «L» o línea.",
+      "Coloca el dibujo como dicen los casos girando solo la capa de arriba.",
+      "Haz el algoritmo. El punto pasa a «L», la «L» a línea y la línea a cruz.",
+    ],
+    cases: [
+      { id: "punto", name: "Punto", how: "Haz el algoritmo una vez, en cualquier posición." },
+      { id: "ele", name: "«L»", how: "Gira arriba hasta que la «L» quede detrás y a la izquierda, y haz el algoritmo." },
+      { id: "linea", name: "Línea", how: "Gira arriba hasta que la línea vaya de izquierda a derecha, y haz el algoritmo." },
+    ],
+    algs: [{ name: "Cruz amarilla", moves: ALG.cross, trick: "Delante como el reloj, el «cuatro», y delante al revés: el «cuatro» envuelto en un giro de delante." }],
+    tip: "Las esquinas no cuentan todavía: fíjate solo en las aristas.",
+    done: "Hay una cruz amarilla arriba.",
+  },
+  {
+    title: "Aristas amarillas en su sitio",
+    goal: "Que cada arista amarilla coincida también con el centro de su lado.",
+    hold: "Amarillo arriba. Gira la capa de arriba buscando dos aristas que coincidan con su centro.",
+    method: [
+      "Gira la capa de arriba hasta que al menos dos aristas coincidan con su centro.",
+      "Si son dos que están juntas, colócate con ellas detrás y a la derecha y haz el algoritmo.",
+      "Si son dos enfrentadas, haz el algoritmo una vez y volverán a quedar dos juntas.",
+      "Al final, gira la capa de arriba hasta que coincidan las cuatro.",
+    ],
+    cases: [
+      { id: "juntas", name: "Dos juntas bien", how: "Detrás y a la derecha, y el algoritmo." },
+      { id: "enfrente", name: "Dos enfrentadas bien", how: "Algoritmo una vez para pasar al caso de dos juntas." },
+    ],
+    algs: [{ name: "El «sune»", moves: ALG.sune, trick: "Derecha sube, arriba izquierda, derecha baja, arriba izquierda, derecha sube, arriba dos veces, derecha baja." }],
+    tip: "Este algoritmo desordena las esquinas de arriba: no pasa nada, las arreglamos en las dos lecciones siguientes.",
+    done: "La cruz amarilla coincide con el centro de cada lado.",
+  },
+  {
+    title: "Esquinas amarillas en su sitio",
+    goal: "Poner cada esquina amarilla en su sitio, aunque esté girada.",
+    hold: "Amarillo arriba. Una esquina está en su sitio si tiene los tres colores de los centros que toca, aunque el amarillo no mire hacia arriba.",
+    method: [
+      "Busca una esquina que ya esté en su sitio.",
+      "Gira el cubo entero para tenerla delante a la derecha y haz el algoritmo. Las otras tres cambian de sitio.",
+      "Repite hasta que las cuatro estén en su sitio (una o dos veces).",
+      "Si ninguna está en su sitio, haz el algoritmo una vez en cualquier posición.",
+    ],
+    cases: [
+      { id: "una", name: "Hay una en su sitio", how: "Ponla delante a la derecha y haz el algoritmo." },
+      { id: "ninguna", name: "Ninguna en su sitio", how: "Haz el algoritmo una vez y vuelve a mirar." },
+    ],
+    algs: [{ name: "Cambiar esquinas", moves: ALG.corners, trick: "Arriba y derecha, luego vuelta e izquierda, como un vaivén." }],
+    tip: "Gira el cubo entero para elegir la esquina, no la capa de arriba.",
+    done: "Las cuatro esquinas de arriba tienen sus tres colores en su sitio.",
+  },
+  {
+    title: "Girar las esquinas amarillas",
+    goal: "Girar cada esquina para que el amarillo quede arriba. Es el último paso: el cubo queda resuelto.",
+    hold: "Amarillo arriba y una esquina por arreglar delante a la derecha. Desde aquí no se gira el cubo entero.",
+    method: [
+      "Con la esquina delante a la derecha, repite el algoritmo hasta que su amarillo mire hacia arriba (dos o cuatro veces).",
+      "Lo de abajo se desordena: es normal, no lo toques.",
+      "Gira solo la capa de arriba para traer la siguiente esquina delante a la derecha, y repite.",
+      "Cuando todas tengan el amarillo arriba, lo de abajo vuelve solo a su sitio. Gira la capa de arriba hasta que todo coincida.",
+    ],
+    cases: [{ id: "girar", name: "Esquina con el amarillo de lado", how: "Repite el algoritmo hasta que el amarillo mire arriba." }],
+    algs: [{ name: "Girar esquina", moves: ALG.twist, trick: "Derecha baja, abajo a la izquierda, derecha sube, abajo a la derecha. Siempre de dos en dos." }],
+    tip: "El fallo típico es girar el cubo entero a mitad: solo se gira la capa de arriba.",
+    done: "¡Cubo resuelto!",
+  },
+];
