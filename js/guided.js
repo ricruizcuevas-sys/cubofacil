@@ -71,6 +71,16 @@ export const WHY = {
     "Bajamos la columna de la izquierda: tres esquinas han cambiado de sitio en círculo.",
   ],
 };
+/** What each algorithm is for, shown before it is used (owner, 25/11/2026). */
+export const ALG_INFO = {
+  T: { name: "Los 4 giros de las esquinas", what: "Bajan una esquina de arriba y la vuelven a subir un poco girada. Repetidos 1, 3 o 5 veces colocan una esquina blanca; en el paso 7, 2 o 4 veces giran una esquina amarilla.", when: "Con la esquina delante a la derecha." },
+  RIGHT: { name: "La arista va a la derecha", what: "Mete la arista de delante en el hueco de la fila del medio de la derecha, sin romper la capa blanca.", when: "Cuando su color de arriba es el del centro de la derecha." },
+  LEFT: { name: "La arista va a la izquierda", what: "Mete la arista de delante en el hueco de la fila del medio de la izquierda, sin romper la capa blanca.", when: "Cuando su color de arriba es el del centro de la izquierda." },
+  CROSS: { name: "Los 6 giros de la cruz amarilla", what: "Dan la vuelta a las aristas de arriba: de punto a «L», de «L» a raya y de raya a cruz.", when: "Con la «L» detrás y a la izquierda, o con la raya tumbada." },
+  SWAP: { name: "Los 8 giros de las aristas amarillas", what: "Cambian de sitio las aristas de delante y de la izquierda, sin tocar las de detrás y la derecha.", when: "Con las dos aristas buenas detrás y a la derecha." },
+  PLACE: { name: "Los 8 giros de las esquinas amarillas", what: "Mueven tres esquinas de arriba en círculo y dejan quieta la de delante a la derecha.", when: "Con una esquina ya en su sitio delante a la derecha." },
+};
+export const ALG_MOVES = ALG;
 const CROSS_WHY = "En la cruz no hay algoritmo que aprender: subimos cada pieza a su sitio sin romper las que ya están. Fíjate en el camino que hace.";
 
 export const STAGES = [
@@ -164,7 +174,8 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
   const add = (step) => { step.before = s; step.stage = stage; step.group = group; s = applyStep(s, step); steps.push(step); };
   const info = (title, text, hl = []) => add({ kind: "info", title, text, hl });
   const cube = (token, why, hl = []) => { if (token) add({ kind: "cube", token, text: CUBE_WORD[token], note: why, hl }); };
-  const moves = (list, note, hl = [], why = null) => list.forEach((token, i) => add({ kind: "move", token, text: WORD[token], note: typeof note === "function" ? note(i) : note, hl, why: Array.isArray(why) ? why[i] : why }));
+  const ALG_OF = new Map(Object.entries(WHY).map(([key, list]) => [list, key]));
+  const moves = (list, note, hl = [], why = null) => list.forEach((token, i) => add({ kind: "move", token, text: WORD[token], note: typeof note === "function" ? note(i) : note, hl, why: Array.isArray(why) ? why[i] : why, alg: Array.isArray(why) ? ALG_OF.get(why) : null, algIndex: i }));
   const turnUntil = (options, ok) => options.find((t) => ok(t ? applyMove(s, t) : s));
   const orientUp = (color, why) => {
     const n = centreNormal(s, color);

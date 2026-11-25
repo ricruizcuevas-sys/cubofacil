@@ -1,7 +1,7 @@
 // CuboFácil: the guide as an app. One thing at a time: you read the turn, look at the arrow, do it on
 // your cube and press «Hecho». Nothing plays by itself. Your own cube can be read from two photos.
 import { applyMoves, randomScramble, rot, solvedCube, COLOR_NAME } from "./cube.js";
-import { ALG, STAGES, plan, currentStage, showFor, cubeTurnOf, centreColor } from "./guided.js";
+import { ALG, ALG_INFO, STAGES, plan, currentStage, showFor, cubeTurnOf, centreColor } from "./guided.js";
 import { WORD, centreName } from "./words.js";
 import { CubeView } from "./view.js";
 import { draw } from "./draw.js";
@@ -168,10 +168,10 @@ function player(root, { steps, end, grey = false, saveKey = null, finish, rail =
     const next = root.querySelector('[data-act="next"] span');
     if (st.kind === "info") {
       note.textContent = st.group && st.group !== STAGES[stage].title ? st.group : "";
-      main.textContent = st.lesson ? "Qué vamos a hacer" : st.title;
+      main.textContent = st.algCard ? st.title : st.lesson ? "Qué vamos a hacer" : st.title;
       why.innerHTML = st.text ? `<p>${esc(st.text)}</p>` : "";
       if (st.lesson) lesson.innerHTML = st.lesson;
-      next.textContent = st.lesson ? "Empezar este paso" : "Entendido";
+      next.textContent = st.algCard ? "Ver los giros" : st.lesson ? "Empezar" : "Entendido";
     } else if (st.kind === "cube") {
       note.textContent = "Gira el cubo entero en la mano, sin mover ninguna capa";
       main.textContent = st.text;
@@ -229,7 +229,6 @@ function lessonIntro(n) {
 let heroTimer = 0;
 function home() {
   const tutorial = store.get(TUTORIAL_KEY);
-  const saved = store.get("cubofacil-mi-cubo");
   app.innerHTML = `
     <section class="hero">
       <div class="hero-cube" id="hero-cube" aria-hidden="true"></div>
@@ -249,8 +248,6 @@ function home() {
     <ol class="steps-list">${STAGES.map((l, k) => `<li><a href="#/paso/${k + 1}"><span class="num">${k + 1}</span><span class="steps-text"><strong>${esc(l.title)}</strong><small>${esc(l.goal)}</small></span>${icon("next")}</a></li>`).join("")}</ol>
     <h2 class="section">Más</h2>
     <div class="tiles">
-      <a class="tile" href="#/mi-cubo?para=resolver">${icon("wand")}<b>Resolver mi cubo</b><small>Sin tutorial: te guiamos giro a giro hasta resolverlo.</small></a>
-      ${saved ? `<a class="tile" href="#/mi-cubo/resolver">${icon("next")}<b>Seguir con mi cubo</b><small>Vuelve al giro donde lo dejaste.</small></a>` : ""}
       <a class="tile" href="#/giros">${icon("rotate")}<b>Los giros</b><small>Los 12 giros, dibujados.</small></a>
       <a class="tile" href="guia/CuboFacil-guia.pdf" download>${icon("pdf")}<b>Guía en PDF</b><small>Para imprimir, con todos los dibujos.</small></a>
     </div>
@@ -281,6 +278,24 @@ function tutorialPage() {
   const { steps, end } = plan(state);
   // Each step opens with its lesson, as in the guide.
   for (const st of steps) if (st.kind === "info" && /^Paso \d/.test(st.title)) st.lesson = lessonIntro(st.stage);
+  // Owner, 25/11/2026: before an algorithm is used, it is explained (in full the first time, briefly after).
+  const seen = new Set();
+  for (let k = steps.length - 1; k >= 0; k--) {
+    const st = steps[k];
+    if (st.kind !== "move" || !st.alg || st.algIndex !== 0) continue;
+    const info = ALG_INFO[st.alg];
+    steps.splice(k, 0, { kind: "info", stage: st.stage, group: st.group, hl: st.hl, before: st.before, title: info.name, text: "", alg: st.alg, algCard: true });
+  }
+  for (const st of steps) {
+    if (!st.algCard) continue;
+    const info = ALG_INFO[st.alg];
+    const first = !seen.has(st.alg);
+    seen.add(st.alg);
+    st.text = first ? info.what : `Otra vez el mismo algoritmo: ${info.what.charAt(0).toLowerCase()}${info.what.slice(1)}`;
+    st.lesson = first
+      ? `<div class="alg"><p class="alg-name">Algoritmo · ${seq(ALG[st.alg]).length} giros</p><p class="alg-when">${esc(info.when)}</p><ol class="alg-moves">${seq(ALG[st.alg]).map((t) => `<li>${esc(WORD[t])}</li>`).join("")}</ol></div><p class="tip soft">Ahora lo verás giro a giro, con para qué sirve cada uno.</p>`
+      : "";
+  }
   const top = centreColor(state, [0, 1, 0]), front = centreColor(state, [0, 0, 1]), right = centreColor(state, [1, 0, 0]);
   steps.unshift({
     kind: "info", stage: 0, group: "", hl: [], before: state,
@@ -341,7 +356,7 @@ const CSS_COLOR = { W: "#F4F4F4", Y: "#FFD500", G: "#16A34A", B: "#1D4ED8", O: "
 
 const photos = [null, null]; // { canvas, image, handles }
 
-const purpose = () => (store.get("cubofacil-fotos-para") === "tutorial" ? "tutorial" : "resolver");
+const purpose = () => "tutorial";
 function myCube() {
   const forTutorial = purpose() === "tutorial";
   app.innerHTML = `
@@ -473,7 +488,7 @@ function reviewScreen() {
     <div class="net">${FACES.map((f) => `<div class="face" style="grid-column:${f.col};grid-row:${f.row}">${[0, 1, 2].flatMap((r) => [0, 1, 2].map((c) => `<button class="cell" data-i="${CELLS.findIndex((x) => x.face === f && x.r === r && x.c === c)}"></button>`)).join("")}</div>`).join("")}</div>
     <div class="problems" aria-live="polite"></div>
     <div class="cube-wrap small-cube"><div class="cube" id="cube"></div></div>
-    <button class="btn" data-go disabled>Resolver mi cubo</button>`;
+    <button class="btn" data-go disabled>Empezar el tutorial con mi cubo</button>`;
   const view = new CubeView(app.querySelector("#cube"));
   const paint = () => {
     const cells = app.querySelectorAll(".cell");
@@ -505,20 +520,6 @@ function reviewScreen() {
   paint();
 }
 
-function solveMine() {
-  const code = store.get("cubofacil-mi-cubo");
-  if (!code) { location.hash = "#/mi-cubo"; return; }
-  const state = decode(code);
-  const top = centreColor(state, [0, 1, 0]), front = centreColor(state, [0, 0, 1]), right = centreColor(state, [1, 0, 0]);
-  const { steps, end } = plan(state);
-  steps.unshift({ kind: "info", title: "Coge tu cubo así", text: `Como en la primera foto: ${centreName(top)} arriba, ${centreName(front)} delante, mirándote, y ${centreName(right)} a la derecha.`, before: state, stage: Math.min(currentStage(state), 6), group: "", hl: [] });
-  app.innerHTML = `<a class="back" href="#/">${icon("back")} Inicio</a><h1>Mi cubo</h1><div id="play"></div>`;
-  player(app.querySelector("#play"), {
-    steps, end, saveKey: "cubofacil-mi-cubo-paso",
-    finish: `<p class="ok big">¡Has resuelto tu cubo!</p><div class="row"><a class="btn" href="#/mi-cubo">Resolver otro</a><a class="btn ghost" href="#/">Inicio</a></div>`,
-  });
-}
-
 // ───────── Router ─────────
 function route() {
   cleanup();
@@ -532,7 +533,6 @@ function route() {
   else if (h === "#/giros") turnsPage();
   else if (h === "#/mi-cubo") myCube();
   else if (h === "#/mi-cubo/repaso") reviewScreen();
-  else if (h === "#/mi-cubo/resolver") solveMine();
   else home();
   window.scrollTo(0, 0);
 }
