@@ -4,8 +4,8 @@ Aprende a resolver el cubo de Rubik 3x3 con el **método por capas para principi
 
 Tiene tres partes:
 
-- **Resolver mi cubo.** Haces 2 fotos de tu cubo, cada una con tres caras. La app lee los colores en el propio móvil, sin enviar las fotos a ningún sitio. Después te deja repasarlos casilla a casilla y comprueba que ese cubo puede existir. Por último te guía con **tu** cubo, giro a giro.
-- **Los 7 pasos.** Cada paso se explica como en la guía y se practica con un cubo de ejemplo.
+- **El tutorial de los 7 pasos.** Se sigue con un cubo inventado o con el tuyo (2 fotos). Es el mismo cubo en los 7 pasos, de principio a fin. Cada paso empieza con su explicación y su algoritmo, y luego lo ves aplicado a ese cubo en 3D, giro a giro, con **el porqué de cada giro**.
+- **Resolver mi cubo**, sin tutorial: con 2 fotos de tu cubo te guía giro a giro hasta resolverlo.
 - **Guía en PDF** para imprimir.
 
 Cómo se sigue cada giro:

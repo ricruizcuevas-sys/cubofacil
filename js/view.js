@@ -42,8 +42,9 @@ export class CubeView {
   }
 
   resize() {
-    const w = this.root.clientWidth || 320;
-    this.size = Math.max(34, Math.min(64, Math.floor(w / 5.6)));
+    // The whole cube (and its turns) fits the box: the smaller side decides.
+    const w = Math.min(this.root.clientWidth || 320, (this.root.clientHeight || 320) * 1.15);
+    this.size = Math.max(30, Math.min(60, Math.floor(w / 6.2)));
     this.root.style.setProperty("--s", this.size + "px");
     this.root.style.setProperty("--half", this.size / 2 + "px");
     this.placeAll();

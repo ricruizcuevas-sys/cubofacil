@@ -14,6 +14,65 @@ export const ALG = {
 };
 const seq = (t) => t.trim().split(/\s+/);
 
+/** Why each turn of each algorithm is there (owner, 25/11/2026: the tutorial explains, it does not only dictate). */
+export const WHY = {
+  T: [
+    "Bajamos la columna de la derecha: el sitio de la esquina, arriba a la derecha, baja.",
+    "Apartamos la capa de abajo hacia la izquierda para no romper nada al volver a subir.",
+    "Subimos otra vez la columna de la derecha.",
+    "Devolvemos la capa de abajo. Cada vez que repites estos 4 giros, la esquina de delante a la derecha gira un poco hasta quedar bien.",
+  ],
+  RIGHT: [
+    "Apartamos la arista hacia la izquierda: deja libre el sitio de arriba a la derecha.",
+    "Subimos la columna de la derecha: el hueco de la fila del medio sube arriba.",
+    "Ponemos la arista encima de ese hueco.",
+    "Bajamos la columna de la derecha: la arista queda emparejada con su esquina.",
+    "Giramos arriba para preparar la cara de delante.",
+    "Abrimos la cara de delante.",
+    "Devolvemos la capa de arriba.",
+    "Cerramos la cara de delante: la arista entra en la fila del medio y la esquina vuelve a su sitio.",
+  ],
+  LEFT: [
+    "Apartamos la arista hacia la derecha: deja libre el sitio de arriba a la izquierda.",
+    "Subimos la columna de la izquierda: el hueco de la fila del medio sube arriba.",
+    "Ponemos la arista encima de ese hueco.",
+    "Bajamos la columna de la izquierda: la arista queda emparejada con su esquina.",
+    "Giramos arriba para preparar la cara de delante.",
+    "Abrimos la cara de delante, hacia el otro lado.",
+    "Devolvemos la capa de arriba.",
+    "Cerramos la cara de delante: la arista entra en la fila del medio y la esquina vuelve a su sitio.",
+  ],
+  CROSS: [
+    "Abrimos la cara de delante: así los giros siguientes no rompen las dos capas de abajo.",
+    "Empieza el truco «derecha arriba, arriba izquierda, derecha abajo, arriba derecha», que da la vuelta a las aristas de arriba.",
+    "Seguimos el truco: la capa de arriba hacia la izquierda.",
+    "Seguimos el truco: la derecha baja.",
+    "Termina el truco: la capa de arriba vuelve.",
+    "Cerramos la cara de delante: las capas de abajo quedan como estaban y arriba aparece más amarillo.",
+  ],
+  SWAP: [
+    "Primera parte: subimos la columna de la derecha.",
+    "La capa de arriba hacia la izquierda.",
+    "Bajamos la columna de la derecha.",
+    "Segunda parte: otra vez la capa de arriba hacia la izquierda.",
+    "Subimos la columna de la derecha.",
+    "Media vuelta de la capa de arriba.",
+    "Bajamos la columna de la derecha: las aristas de delante y de la izquierda ya han cambiado de sitio.",
+    "Último giro de arriba: cada arista queda frente a su centro.",
+  ],
+  PLACE: [
+    "Las otras tres esquinas de arriba van a moverse en círculo; la de delante a la derecha no se mueve. Empezamos con la capa de arriba hacia la izquierda.",
+    "Subimos la columna de la derecha.",
+    "La capa de arriba hacia la derecha.",
+    "Subimos la columna de la izquierda.",
+    "La capa de arriba hacia la izquierda.",
+    "Bajamos la columna de la derecha.",
+    "La capa de arriba hacia la derecha.",
+    "Bajamos la columna de la izquierda: tres esquinas han cambiado de sitio en círculo.",
+  ],
+};
+const CROSS_WHY = "En la cruz no hay algoritmo que aprender: subimos cada pieza a su sitio sin romper las que ya están. Fíjate en el camino que hace.";
+
 export const STAGES = [
   { title: "La cruz blanca", goal: "Una cruz blanca arriba, y cada pieza de la cruz con su otro color igual que el centro de su lado." },
   { title: "Las esquinas blancas", goal: "Toda la cara blanca, y la fila de arriba de cada lado igual que su centro." },
@@ -105,7 +164,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
   const add = (step) => { step.before = s; step.stage = stage; step.group = group; s = applyStep(s, step); steps.push(step); };
   const info = (title, text, hl = []) => add({ kind: "info", title, text, hl });
   const cube = (token, why, hl = []) => { if (token) add({ kind: "cube", token, text: CUBE_WORD[token], note: why, hl }); };
-  const moves = (list, note, hl = []) => list.forEach((token, i) => add({ kind: "move", token, text: WORD[token], note: typeof note === "function" ? note(i) : note, hl }));
+  const moves = (list, note, hl = [], why = null) => list.forEach((token, i) => add({ kind: "move", token, text: WORD[token], note: typeof note === "function" ? note(i) : note, hl, why: Array.isArray(why) ? why[i] : why }));
   const turnUntil = (options, ok) => options.find((t) => ok(t ? applyMove(s, t) : s));
   const orientUp = (color, why) => {
     const n = centreNormal(s, color);
@@ -148,7 +207,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
       const other = best.e.replace("W", "");
       group = `Pieza ${pieceName(best.e)}`;
       info(`La pieza ${pieceName(best.e)}`, `Va arriba, encima de ${centreName(other)}, con el blanco arriba. ${best.path.length === 1 ? "Basta un giro:" : `Hazlo con estos ${best.path.length} giros:`}`, [best.e]);
-      moves(best.path, (i) => `Giro ${i + 1} de ${best.path.length}`, [best.e]);
+      moves(best.path, (i) => `Giro ${i + 1} de ${best.path.length}`, [best.e], CROSS_WHY);
       done.push(best.e);
       left = left.filter((e) => e !== best.e);
     }
@@ -165,7 +224,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
         info(`La esquina ${pieceName(c)}`, "Está arriba, pero mal colocada. Primero hay que bajarla a la capa de abajo.", [c]);
         const p = posOf(s, c);
         cube(yTurnTaking([p[0], 0, p[2]], [1, 0, 1]), "Para tenerla arriba, delante a la derecha.", [c]);
-        moves(seq(ALG.T), "Estos 4 giros la bajan.", [c]);
+        moves(seq(ALG.T), "Estos 4 giros la bajan.", [c], WHY.T);
         continue;
       }
       group = `Esquina ${pieceName(c)}`;
@@ -177,7 +236,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
       if (d) moves([d], "Hasta que la esquina quede justo debajo de su sitio.", [c]);
       let n = 0;
       for (let t = s; n < 6 && !pieceSolved(t, c); n++) t = seq(ALG.T).reduce(applyMove, t);
-      for (let r = 1; r <= n; r++) moves(seq(ALG.T), (i) => `Vez ${r} de ${n} · giro ${i + 1} de 4`, [c]);
+      for (let r = 1; r <= n; r++) moves(seq(ALG.T), (i) => `Vez ${r} de ${n} · giro ${i + 1} de 4`, [c], WHY.T);
     }
     throw Error("CORNERS_LOOP");
   }
@@ -200,14 +259,14 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
         const right = centreColor(s, [1, 0, 0]) === top;
         const alg = seq(right ? ALG.RIGHT : ALG.LEFT);
         info(right ? "Va a la derecha" : "Va a la izquierda", `Arriba la arista es ${colorWord(top)}, como el centro de la ${right ? "derecha" : "izquierda"}. Haz estos 8 giros.`, [e]);
-        moves(alg, (i) => `Hacia la ${right ? "derecha" : "izquierda"} · giro ${i + 1} de 8`, [e]);
+        moves(alg, (i) => `Hacia la ${right ? "derecha" : "izquierda"} · giro ${i + 1} de 8`, [e], right ? WHY.RIGHT : WHY.LEFT);
       } else {
         const w = wrong[0];
         group = `Arista ${pieceName(w)}`;
         info(`La arista ${pieceName(w)}`, "Está en la fila del medio, pero mal. Con los 8 giros de «hacia la derecha» sale arriba.", [w]);
         const p = posOf(s, w);
         cube(yTurnTaking([p[0], 0, p[2]], [1, 0, 1]), "Para tenerla delante a la derecha.", [w]);
-        moves(seq(ALG.RIGHT), (i) => `Sacarla · giro ${i + 1} de 8`, [w]);
+        moves(seq(ALG.RIGHT), (i) => `Sacarla · giro ${i + 1} de 8`, [w], WHY.RIGHT);
       }
     }
     throw Error("MIDDLE_LOOP");
@@ -233,7 +292,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
         const u = turnUntil(U_TURNS, (t) => yellowUpEdges(t) === "BL");
         if (u) moves([u], "Hasta que la «L» quede detrás y a la izquierda.");
       }
-      moves(seq(ALG.CROSS), (i) => `Giro ${i + 1} de 6`);
+      moves(seq(ALG.CROSS), (i) => `Giro ${i + 1} de 6`, [], WHY.CROSS);
     }
     throw Error("CROSS_LOOP");
   }
@@ -258,7 +317,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
         const t = Y_TURNS.find((y) => [...m].every((x) => { const v = y ? rot(E[x], 1, CUBE_TURN[y][1]) : E[x]; return same(v, E.B) || same(v, E.R); }));
         cube(t, "Para tener las dos buenas detrás y a la derecha.", keys);
       }
-      moves(seq(ALG.SWAP), (i) => `Giro ${i + 1} de 8`, keys);
+      moves(seq(ALG.SWAP), (i) => `Giro ${i + 1} de 8`, keys, WHY.SWAP);
     }
     throw Error("EDGES_LOOP");
   }
@@ -274,10 +333,10 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
         info(`La esquina ${pieceName(c)} ya está en su sitio`, "Aunque esté girada, tiene los mismos colores que los tres centros que la rodean. Tenla arriba, delante a la derecha, y haz los 8 giros.", [c]);
         const p = posOf(s, c);
         cube(yTurnTaking([p[0], 0, p[2]], [1, 0, 1]), "Para tenerla delante a la derecha.", [c]);
-        moves(seq(ALG.PLACE), (i) => `Giro ${i + 1} de 8`, [c]);
+        moves(seq(ALG.PLACE), (i) => `Giro ${i + 1} de 8`, [c], WHY.PLACE);
       } else {
         info("Ninguna esquina está en su sitio", "Haz los 8 giros una vez desde cualquier lado y vuelve a mirar.");
-        moves(seq(ALG.PLACE), (i) => `Giro ${i + 1} de 8`);
+        moves(seq(ALG.PLACE), (i) => `Giro ${i + 1} de 8`, [], WHY.PLACE);
       }
     }
     throw Error("PLACE_LOOP");
@@ -304,7 +363,7 @@ export function plan(start, { from = currentStage(start), to = 7 } = {}) {
       const c = keyAt(s, [1, 1, 1]);
       let n = 0;
       for (let t = s; n < 6 && !yUp(t, [1, 1, 1]); n++) t = seq(ALG.T).reduce(applyMove, t);
-      for (let r = 1; r <= n; r++) moves(seq(ALG.T), (i) => `Vez ${r} de ${n} · giro ${i + 1} de 4`, [c]);
+      for (let r = 1; r <= n; r++) moves(seq(ALG.T), (i) => `Vez ${r} de ${n} · giro ${i + 1} de 4`, [c], WHY.T);
     }
     const u = turnUntil(U_TURNS, (t) => STAGE_DONE[6](t));
     if (u) moves([u], "Para terminar: la capa de arriba hasta que todo coincida.");

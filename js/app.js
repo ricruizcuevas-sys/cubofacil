@@ -28,6 +28,11 @@ function icon(name) {
     again: '<path d="M4 12a8 8 0 1 0 3-6.2"/><path d="M4 4v5h5"/>',
     camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
     image: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="m4 16 5-5 4 4 3-3 4 4"/>',
+    hand: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12"/><path d="M11 11V4.5a1.5 1.5 0 0 1 3 0V11"/><path d="M14 11V6a1.5 1.5 0 0 1 3 0v8a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L3.6 14.6a1.6 1.6 0 0 1 2.6-1.8L8 15"/>',
+    dice: '<rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.2"/><circle cx="15" cy="15" r="1.2"/><circle cx="15" cy="9" r="1.2"/><circle cx="9" cy="15" r="1.2"/>',
+    wand: '<path d="m4 20 11-11"/><path d="m14 4 1 2 2 1-2 1-1 2-1-2-2-1 2-1z"/><path d="m19 11 .6 1.2 1.2.6-1.2.6L19 14.6l-.6-1.2-1.2-.6 1.2-.6z"/>',
+    rotate: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+    pdf: '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/>',
   };
   return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]}</svg>`;
 }
@@ -111,53 +116,72 @@ const LESSONS = [
 ];
 
 // ───────── The step-by-step player ─────────
-/**
- * Shows one step at a time. options: { steps, end, grey: show greyed pieces, saveKey: remember the step,
- * onFinish: html of the last screen }.
- */
-function player(root, { steps, end, grey = false, saveKey = null, finish }) {
+/** One thing at a time on the 3D cube: read, look at the arrow, do it, press «Siguiente». Nothing plays by itself.
+ *  options: { steps, end, grey, saveKey, finish, rail: show the 7-step rail (tutorial) }. */
+function player(root, { steps, end, grey = false, saveKey = null, finish, rail = false }) {
   root.innerHTML = `
-    <div class="progress"><div class="progress-bar"><span></span></div><p class="progress-text"></p></div>
-    <p class="group"></p>
-    <div class="cube-wrap"><div class="cube" id="cube"></div><button class="reset-view" type="button">Recolocar vista</button></div>
-    <div class="caption" aria-live="polite"><p class="counter"></p><p class="caption-main"></p><p class="caption-why"></p></div>
-    <div class="controls">
-      <button class="ctl" data-act="prev">${icon("back")}<span>Atrás</span></button>
-      <button class="ctl" data-act="again">${icon("again")}<span>Ver cómo</span></button>
-      <button class="ctl main" data-act="next">${icon("next")}<span>Hecho</span></button>
+    ${rail ? `<nav class="rail" aria-label="Los 7 pasos">${STAGES.map((s, k) => `<button class="rail-step" data-stage="${k}" aria-label="Paso ${k + 1}: ${esc(s.title)}"><span>${k + 1}</span></button>`).join("")}</nav>` : `<div class="progress"><span></span></div>`}
+    <div class="stage-head"><p class="kicker"></p><h2 class="stage-title"></h2></div>
+    <div class="cube-card">
+      <div class="cube" id="cube"></div>
+      <button class="reset-view" type="button" aria-label="Recolocar el cubo">${icon("again")}</button>
+      <p class="cube-hint">Arrastra el cubo para verlo por todos lados</p>
     </div>
-    <div class="after"></div>`;
+    <section class="panel" aria-live="polite">
+      <p class="panel-note"></p>
+      <p class="panel-main"></p>
+      <div class="panel-why"></div>
+      <div class="panel-lesson"></div>
+    </section>
+    <div class="after"></div>
+    <div class="controls">
+      <button class="ctl" data-act="prev" aria-label="Atrás">${icon("back")}</button>
+      <button class="ctl" data-act="again">${icon("again")}<span>Repetir</span></button>
+      <button class="ctl main" data-act="next"><span>Siguiente</span>${icon("next")}</button>
+    </div>`;
   const view = new CubeView(root.querySelector("#cube"));
   root.querySelector(".reset-view").onclick = () => view.resetView();
   let i = Math.min(Number(saveKey ? store.get(saveKey) : 0) || 0, steps.length);
   let busy = false;
-  const total = steps.length;
+  const firstOfStage = (k) => steps.findIndex((st) => st.stage === k);
   const render = () => {
     const st = steps[i];
     const state = st ? st.before : end;
-    const show = grey && st ? showFor(st.stage) : null;
-    view.setState(state, st?.hl ?? [], show);
+    view.setState(state, st?.hl ?? [], grey && st ? showFor(st.stage) : null);
     view.showArrow(st?.kind === "move" ? st.token : null);
-    root.querySelector(".progress-bar span").style.width = `${Math.round((i / total) * 100)}%`;
-    root.querySelector(".progress-text").textContent = st ? `Paso ${st.stage + 1} de 7 · ${STAGES[st.stage].title}` : "Terminado";
-    root.querySelector(".group").textContent = st && st.kind !== "info" ? st.group : "";
-    const counter = root.querySelector(".counter"), main = root.querySelector(".caption-main"), why = root.querySelector(".caption-why");
-    const next = root.querySelector('[data-act="next"] span');
     if (saveKey) store.set(saveKey, String(i));
+    const stage = st ? st.stage : 7;
+    if (rail) root.querySelectorAll(".rail-step").forEach((b, k) => { b.classList.toggle("done", k < stage); b.classList.toggle("now", k === stage); b.disabled = firstOfStage(k) < 0 || k > stage; });
+    else root.querySelector(".progress span").style.width = `${Math.round((i / steps.length) * 100)}%`;
+    root.querySelector(".kicker").textContent = st ? `Paso ${stage + 1} de 7` : "Terminado";
+    root.querySelector(".stage-title").textContent = st ? STAGES[stage].title : "¡Cubo resuelto!";
+    const note = root.querySelector(".panel-note"), main = root.querySelector(".panel-main"), why = root.querySelector(".panel-why"), lesson = root.querySelector(".panel-lesson");
+    lesson.innerHTML = ""; why.innerHTML = "";
     if (!st) {
-      counter.textContent = ""; main.textContent = "¡Hecho!"; why.innerHTML = "";
+      note.textContent = ""; main.textContent = "Lo has conseguido.";
       root.querySelector(".controls").hidden = true;
       root.querySelector(".after").innerHTML = finish ?? "";
       return;
     }
     root.querySelector(".controls").hidden = false;
     root.querySelector(".after").innerHTML = "";
+    const next = root.querySelector('[data-act="next"] span');
     if (st.kind === "info") {
-      counter.textContent = ""; main.textContent = st.title; why.textContent = st.text; next.textContent = "Entendido";
+      note.textContent = st.group && st.group !== STAGES[stage].title ? st.group : "";
+      main.textContent = st.lesson ? "Qué vamos a hacer" : st.title;
+      why.innerHTML = st.text ? `<p>${esc(st.text)}</p>` : "";
+      if (st.lesson) lesson.innerHTML = st.lesson;
+      next.textContent = st.lesson ? "Empezar este paso" : "Entendido";
     } else if (st.kind === "cube") {
-      counter.textContent = "Gira el cubo entero, sin mover ninguna capa"; main.textContent = st.text; why.textContent = st.note ?? ""; next.textContent = "Hecho";
+      note.textContent = "Gira el cubo entero en la mano, sin mover ninguna capa";
+      main.textContent = st.text;
+      why.innerHTML = st.note ? `<p><b>Para qué:</b> ${esc(st.note)}</p>` : "";
+      next.textContent = "Hecho";
     } else {
-      counter.textContent = st.note ?? ""; main.textContent = st.text; why.textContent = "Mira la flecha: muestra hacia dónde va la parte de delante de esa capa."; next.textContent = "Hecho";
+      note.textContent = [st.group, st.note].filter(Boolean).join(" · ");
+      main.textContent = st.text;
+      why.innerHTML = st.why ? `<p><b>Por qué:</b> ${esc(st.why)}</p>` : "";
+      next.textContent = "Hecho";
     }
     root.querySelector('[data-act="again"]').disabled = st.kind === "info";
     root.querySelector('[data-act="prev"]').disabled = i === 0;
@@ -168,11 +192,12 @@ function player(root, { steps, end, grey = false, saveKey = null, finish }) {
     const st = steps[i];
     view.showArrow(null);
     const nextState = steps[i + 1]?.before ?? end;
-    if (st.kind === "move") await view.animateMove(st.token, nextState, 550);
-    else if (st.kind === "cube") { const [axis, q] = cubeTurnOf(st.token); await view.animateCube(axis, q, nextState, 750); }
+    if (st.kind === "move") await view.animateMove(st.token, nextState, 560);
+    else if (st.kind === "cube") { const [axis, q] = cubeTurnOf(st.token); await view.animateCube(axis, q, nextState, 760); }
     i++;
     busy = false;
     render();
+    if (steps[i]?.kind === "info") root.querySelector(".stage-head").scrollIntoView({ behavior: "smooth", block: "start" });
   };
   root.querySelector('[data-act="prev"]').onclick = () => { if (busy || i === 0) return; i--; render(); };
   root.querySelector('[data-act="again"]').onclick = async () => {
@@ -181,43 +206,104 @@ function player(root, { steps, end, grey = false, saveKey = null, finish }) {
     busy = true;
     view.showArrow(null);
     if (st.kind === "move") await view.replayMove(st.token, 650);
-    else {
-      const [axis, q] = cubeTurnOf(st.token);
-      await view.animateCube(axis, q, steps[i + 1]?.before ?? end, 750);
-      await new Promise((r) => setTimeout(r, 400));
-    }
+    else { const [axis, q] = cubeTurnOf(st.token); await view.animateCube(axis, q, steps[i + 1]?.before ?? end, 760); await new Promise((r) => setTimeout(r, 400)); }
     busy = false;
     render();
   };
+  if (rail) root.querySelectorAll(".rail-step").forEach((b) => (b.onclick = () => { if (busy || b.disabled) return; i = firstOfStage(Number(b.dataset.stage)); render(); }));
   render();
 }
 
+/** The lesson of a step, as in the guide: how to hold it, the idea, and its algorithm with every turn named. */
+function lessonIntro(n) {
+  const L = LESSONS[n];
+  return `
+    <p class="hold-line">${icon("hand")}<span>${esc(L.hold)}</span></p>
+    <ol class="ideas">${L.text.map((t) => `<li>${t}</li>`).join("")}</ol>
+    ${L.algs.map((a) => `<div class="alg"><p class="alg-name">${esc(a.name)}</p><ol class="alg-moves">${seq(a.moves).map((t) => `<li>${esc(WORD[t])}</li>`).join("")}</ol></div>`).join("")}
+    ${L.tip ? `<p class="tip">${esc(L.tip)}</p>` : ""}
+    <p class="tip soft">Ahora lo verás con el cubo, giro a giro, y te diremos para qué sirve cada giro.</p>`;
+}
+
 // ───────── Screens ─────────
+let heroTimer = 0;
 function home() {
+  const tutorial = store.get(TUTORIAL_KEY);
   const saved = store.get("cubofacil-mi-cubo");
   app.innerHTML = `
     <section class="hero">
+      <div class="hero-cube" id="hero-cube" aria-hidden="true"></div>
+      <p class="eyebrow">Método por capas · 7 pasos</p>
       <h1>Aprende a resolver el cubo de Rubik</h1>
-      <p>Siete pasos, un giro cada vez. Lees el giro, miras la flecha, lo haces en tu cubo y pulsas <b>Hecho</b>.</p>
+      <p class="lead">Un tutorial con un cubo en 3D: te explicamos cada paso y lo ves hecho, giro a giro, en el mismo cubo de principio a fin.</p>
     </section>
-    <a class="big-link primary" href="#/mi-cubo">${icon("camera")}<span><b>Resolver mi cubo</b><small>Haz 2 fotos de tu cubo y te guío con él, giro a giro.</small></span></a>
-    ${saved ? `<a class="big-link" href="#/mi-cubo/resolver"><span><b>Seguir con mi cubo</b><small>Vuelve al giro donde lo dejaste.</small></span></a>` : ""}
+    <section class="feature">
+      <div class="feature-head"><span class="badge">Tutorial</span><h2>Los 7 pasos, con un cubo de verdad</h2><p>Elige con qué cubo quieres aprender.</p></div>
+      ${tutorial ? `<a class="btn primary wide" href="#/tutorial">${icon("next")}<span>Seguir el tutorial</span></a>` : ""}
+      <div class="choice">
+        <button class="choice-card" data-start="random">${icon("dice")}<b>Con un cubo inventado</b><small>Mezclamos uno al azar y lo resolvemos juntos.</small></button>
+        <a class="choice-card" href="#/mi-cubo?para=tutorial">${icon("camera")}<b>Con mi cubo</b><small>Haz 2 fotos de tu cubo y aprende con él.</small></a>
+      </div>
+    </section>
     <h2 class="section">Los 7 pasos</h2>
-    <ol class="lessons">${STAGES.map((l, i) => `<li><a class="lesson-link" href="#/paso/${i + 1}"><span class="num">${i + 1}</span><span><strong>${esc(l.title)}</strong><small>${esc(l.goal)}</small></span></a></li>`).join("")}</ol>
-    <div class="row">
-      <a class="btn ghost" href="#/giros">Los giros</a>
-      <a class="btn ghost" href="#/practica">Cubo mezclado</a>
-      <a class="btn ghost" href="guia/CuboFacil-guia.pdf" download>Guía en PDF</a>
+    <ol class="steps-list">${STAGES.map((l, k) => `<li><a href="#/paso/${k + 1}"><span class="num">${k + 1}</span><span class="steps-text"><strong>${esc(l.title)}</strong><small>${esc(l.goal)}</small></span>${icon("next")}</a></li>`).join("")}</ol>
+    <h2 class="section">Más</h2>
+    <div class="tiles">
+      <a class="tile" href="#/mi-cubo?para=resolver">${icon("wand")}<b>Resolver mi cubo</b><small>Sin tutorial: te guiamos giro a giro hasta resolverlo.</small></a>
+      ${saved ? `<a class="tile" href="#/mi-cubo/resolver">${icon("next")}<b>Seguir con mi cubo</b><small>Vuelve al giro donde lo dejaste.</small></a>` : ""}
+      <a class="tile" href="#/giros">${icon("rotate")}<b>Los giros</b><small>Los 12 giros, dibujados.</small></a>
+      <a class="tile" href="guia/CuboFacil-guia.pdf" download>${icon("pdf")}<b>Guía en PDF</b><small>Para imprimir, con todos los dibujos.</small></a>
     </div>
-    <p class="small version">Versión 2</p>`;
+    <p class="foot">CuboFácil · <span class="version">Versión 3</span></p>`;
+  const hero = new CubeView(app.querySelector("#hero-cube"));
+  hero.setState(applyMoves(solvedCube(), seq("R U R' U'")));
+  let yaw = 0;
+  clearInterval(heroTimer);
+  heroTimer = setInterval(() => { yaw += 0.35; hero.drag.yaw = yaw; hero.applyCamera(false); }, 30);
+  cleanup = () => clearInterval(heroTimer);
+  app.querySelector('[data-start="random"]').onclick = () => startTutorial(applyMoves(solvedCube(), randomScramble(25)), "random");
+}
+
+const TUTORIAL_KEY = "cubofacil-tutorial-cubo";
+const TUTORIAL_STEP = "cubofacil-tutorial-paso";
+function startTutorial(state, kind) {
+  store.set(TUTORIAL_KEY, JSON.stringify({ code: encode(state), kind }));
+  store.del(TUTORIAL_STEP);
+  if (location.hash === "#/tutorial") route();
+  else location.hash = "#/tutorial";
+}
+
+function tutorialPage() {
+  let saved = null;
+  try { saved = JSON.parse(store.get(TUTORIAL_KEY) ?? "null"); } catch { saved = null; }
+  if (!saved?.code) { location.hash = "#/"; return; }
+  const state = decode(saved.code);
+  const { steps, end } = plan(state);
+  // Each step opens with its lesson, as in the guide.
+  for (const st of steps) if (st.kind === "info" && /^Paso \d/.test(st.title)) st.lesson = lessonIntro(st.stage);
+  const top = centreColor(state, [0, 1, 0]), front = centreColor(state, [0, 0, 1]), right = centreColor(state, [1, 0, 0]);
+  steps.unshift({
+    kind: "info", stage: 0, group: "", hl: [], before: state,
+    title: saved.kind === "mine" ? "Coge tu cubo así" : "Este es nuestro cubo mezclado",
+    text: saved.kind === "mine"
+      ? `Como en la primera foto: ${centreName(top)} arriba, ${centreName(front)} delante y ${centreName(right)} a la derecha. Lo resolveremos juntos en 7 pasos.`
+      : `Lo resolveremos en 7 pasos, siempre este mismo cubo. Si tienes uno, mézclalo igual o síguelo mirando: ${centreName(top)} arriba y ${centreName(front)} delante.`,
+  });
+  app.innerHTML = `<div class="bar"><a class="back" href="#/">${icon("back")} Inicio</a><button class="link" data-restart>Empezar con otro cubo</button></div><div id="play"></div>`;
+  app.querySelector("[data-restart]").onclick = () => { store.del(TUTORIAL_KEY); store.del(TUTORIAL_STEP); location.hash = "#/"; };
+  player(app.querySelector("#play"), {
+    steps, end, grey: true, rail: true, saveKey: TUTORIAL_STEP,
+    finish: `<div class="done-card"><p class="done-title">¡Cubo resuelto!</p><p>Ya conoces los 7 pasos. Prueba con otro cubo, o repasa la guía en PDF.</p><div class="row"><button class="btn primary" data-again>Otro cubo inventado</button><a class="btn ghost" href="guia/CuboFacil-guia.pdf" download>Guía en PDF</a></div></div>`,
+  });
 }
 
 function turnsPage() {
   const list = ["R", "R'", "L", "L'", "U", "U'", "D", "D'", "F", "F'", "U2", "F2"];
   app.innerHTML = `
     <a class="back" href="#/">${icon("back")} Inicio</a>
+    <p class="eyebrow">Antes de empezar</p>
     <h1>Los giros</h1>
-    <p class="goal">Un giro mueve una sola capa un cuarto de vuelta. El resto del cubo se queda quieto en tu mano. La flecha dice hacia dónde va la parte de delante de esa capa.</p>
+    <p class="lead">Un giro mueve una sola capa un cuarto de vuelta. El resto del cubo se queda quieto en tu mano. La flecha dice hacia dónde va la parte de delante de esa capa.</p>
     <div class="pics">${list.map((t) => `<figure class="pic">${draw(yellowUp, { move: t, w: 140 })}<figcaption>${esc(WORD[t])}</figcaption></figure>`).join("")}</div>`;
 }
 
@@ -225,35 +311,17 @@ function lessonPage(n) {
   const L = LESSONS[n], S = STAGES[n];
   app.innerHTML = `
     <a class="back" href="#/">${icon("back")} Inicio</a>
-    <h1 class="title"><span class="num">${n + 1}</span> ${esc(S.title)}</h1>
-    <p class="hold-line">${esc(L.hold)}</p>
+    <p class="eyebrow">Paso ${n + 1} de 7</p>
+    <h1>${esc(S.title)}</h1>
+    <p class="lead">${esc(S.goal)}</p>
     <figure class="pic goal-pic">${L.picture()}<figcaption>Así tiene que quedar</figcaption></figure>
-    <section class="card"><ol class="steps">${L.text.map((t) => `<li>${t}</li>`).join("")}</ol>${L.tip ? `<p class="tip">${esc(L.tip)}</p>` : ""}</section>
-    ${L.algs.map((a) => `<section class="card"><h2>${esc(a.name)}</h2><ol class="alg">${seq(a.moves).map((t) => `<li>${esc(WORD[t])}</li>`).join("")}</ol></section>`).join("")}
-    <a class="btn" href="#/paso/${n + 1}/practica">Practicar este paso, giro a giro</a>`;
-}
-
-/** A random cube with the steps before `n` already done. */
-function exampleAt(n) {
-  const mixed = applyMoves(solvedCube(), randomScramble(25));
-  return n ? plan(mixed, { to: n }).end : mixed;
-}
-
-function lessonPractice(n) {
-  const start = exampleAt(n);
-  const { steps, end } = plan(start, { from: n, to: n + 1 });
-  app.innerHTML = `<a class="back" href="#/paso/${n + 1}">${icon("back")} ${esc(STAGES[n].title)}</a><h1 class="title"><span class="num">${n + 1}</span> Practica</h1><p class="goal">Un cubo de ejemplo. Las piezas en gris no importan en este paso; la de borde rosa es la que estás colocando.</p><div id="play"></div>`;
-  player(app.querySelector("#play"), {
-    steps, end, grey: true,
-    finish: `<div class="row"><a class="btn" href="#/paso/${n + 1}/practica?${Date.now()}">Otro ejemplo</a>${n < 6 ? `<a class="btn ghost" href="#/paso/${n + 2}">Paso ${n + 2}</a>` : `<a class="btn ghost" href="#/">Inicio</a>`}</div>`,
-  });
-}
-
-function practiceAll() {
-  const start = applyMoves(solvedCube(), randomScramble(25));
-  const { steps, end } = plan(start);
-  app.innerHTML = `<a class="back" href="#/">${icon("back")} Inicio</a><h1>Cubo mezclado</h1><p class="goal">Un cubo mezclado al azar, de principio a fin. Si tienes uno, mézclalo tú con estos mismos giros… o mejor: <a href="#/mi-cubo">resuelve el tuyo con fotos</a>.</p><div id="play"></div>`;
-  player(app.querySelector("#play"), { steps, end, finish: `<div class="row"><a class="btn" href="#/practica?${Date.now()}">Otro cubo</a><a class="btn ghost" href="#/">Inicio</a></div>` });
+    <section class="panel">${lessonIntro(n).replace('<p class="tip soft">Ahora lo verás con el cubo, giro a giro, y te diremos para qué sirve cada giro.</p>', "")}</section>
+    <div class="row"><a class="btn primary" href="#/tutorial">${icon("next")}<span>Verlo en el tutorial</span></a></div>`;
+  app.querySelector('a[href="#/tutorial"]').onclick = (e) => {
+    if (store.get(TUTORIAL_KEY)) return;
+    e.preventDefault();
+    startTutorial(applyMoves(solvedCube(), randomScramble(25)), "random");
+  };
 }
 
 // ───────── My cube: photos, review, solve ─────────
@@ -273,11 +341,14 @@ const CSS_COLOR = { W: "#F4F4F4", Y: "#FFD500", G: "#16A34A", B: "#1D4ED8", O: "
 
 const photos = [null, null]; // { canvas, image, handles }
 
+const purpose = () => (store.get("cubofacil-fotos-para") === "tutorial" ? "tutorial" : "resolver");
 function myCube() {
+  const forTutorial = purpose() === "tutorial";
   app.innerHTML = `
     <a class="back" href="#/">${icon("back")} Inicio</a>
-    <h1>Resolver mi cubo</h1>
-    <p class="goal">Con 2 fotos leo los colores de tu cubo. Las fotos no salen de tu móvil.</p>
+    <p class="eyebrow">${forTutorial ? "Tutorial con tu cubo" : "Sin tutorial"}</p>
+    <h1>${forTutorial ? "Aprende con tu cubo" : "Resolver mi cubo"}</h1>
+    <p class="lead">Con 2 fotos leemos los colores de tu cubo. Las fotos no salen de tu móvil.</p>
     ${[0, 1].map((i) => `
       <section class="card photo-slot" data-slot="${i}">
         <h2>Foto ${i + 1}</h2>
@@ -424,7 +495,9 @@ function reviewScreen() {
   };
   app.querySelectorAll(".brush").forEach((b) => (b.onclick = () => { brush = b.dataset.c; app.querySelectorAll(".brush").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); }));
   app.querySelectorAll(".cell").forEach((el) => (el.onclick = () => { const i = Number(el.dataset.i); code = code.slice(0, i) + brush + code.slice(i + 1); paint(); }));
+  if (purpose() === "tutorial") app.querySelector("[data-go]").textContent = "Empezar el tutorial con mi cubo";
   app.querySelector("[data-go]").onclick = () => {
+    if (purpose() === "tutorial") return startTutorial(decode(code), "mine");
     store.set("cubofacil-mi-cubo", code);
     store.del("cubofacil-mi-cubo-paso");
     location.hash = "#/mi-cubo/resolver";
@@ -450,18 +523,21 @@ function solveMine() {
 function route() {
   cleanup();
   cleanup = () => {};
+  const query = new URLSearchParams(location.hash.split("?")[1] ?? "");
+  if (query.get("para")) store.set("cubofacil-fotos-para", query.get("para") === "tutorial" ? "tutorial" : "resolver");
   const h = location.hash.replace(/\?.*$/, "");
   let m;
-  if ((m = h.match(/^#\/paso\/([1-7])\/practica$/))) lessonPractice(Number(m[1]) - 1);
-  else if ((m = h.match(/^#\/paso\/([1-7])$/))) lessonPage(Number(m[1]) - 1);
+  if ((m = h.match(/^#\/paso\/([1-7])$/))) lessonPage(Number(m[1]) - 1);
+  else if (h === "#/tutorial") tutorialPage();
   else if (h === "#/giros") turnsPage();
-  else if (h === "#/practica") practiceAll();
   else if (h === "#/mi-cubo") myCube();
   else if (h === "#/mi-cubo/repaso") reviewScreen();
   else if (h === "#/mi-cubo/resolver") solveMine();
   else home();
   window.scrollTo(0, 0);
 }
+// «Otro cubo inventado» at the end of the tutorial (one listener for the whole app).
+document.addEventListener("click", (e) => { if (e.target.closest?.("[data-again]")) startTutorial(applyMoves(solvedCube(), randomScramble(25)), "random"); });
 window.addEventListener("hashchange", route);
 route();
 if ("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(() => {});
