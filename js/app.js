@@ -208,7 +208,8 @@ function home() {
       <a class="btn ghost" href="#/giros">Los giros</a>
       <a class="btn ghost" href="#/practica">Cubo mezclado</a>
       <a class="btn ghost" href="guia/CuboFacil-guia.pdf" download>Guía en PDF</a>
-    </div>`;
+    </div>
+    <p class="small version">Versión 2</p>`;
 }
 
 function turnsPage() {
