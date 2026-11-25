@@ -1,10 +1,11 @@
 // The 3D cube drawn with CSS (no libraries, so it works without internet). Model coordinates have
 // y up; CSS has y down, so y is flipped when placing things.
-import { parseMove, rot, userToFixed } from "./cube.js";
+import { applyMove, parseMove, rot, userToFixed } from "./cube.js";
 
 const ORIENT = { "0,0,1": "", "0,0,-1": "rotateY(180deg)", "1,0,0": "rotateY(90deg)", "-1,0,0": "rotateY(-90deg)", "0,1,0": "rotateX(90deg)", "0,-1,0": "rotateX(-90deg)" };
 const FACE_ORIENT = Object.values(ORIENT);
 const COLOR = { Y: "#FFD500", W: "#F4F4F4", G: "#16A34A", B: "#1D4ED8", O: "#F97316", R: "#DC2626" };
+const GREY = "#5B6170";
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
@@ -90,8 +91,10 @@ export class CubeView {
     this.applyCamera(false);
   }
 
-  setState(state, highlight = []) {
+  /** highlight: pieces (sorted colours) to ring in pink; show(sticker, key): false paints it grey. */
+  setState(state, highlight = [], show = this.show) {
     this.state = state;
+    this.show = show;
     this.highlight = new Set(highlight);
     this.placeAll();
   }
@@ -106,10 +109,14 @@ export class CubeView {
     for (const c of this.cubies) c.el.style.transform = `translate3d(${c.p[0] * s}px, ${-c.p[1] * s}px, ${c.p[2] * s}px)`;
     if (!this.state) return;
     const pieces = this.highlightPositions();
+    const keys = new Map();
+    for (const st of this.state) { const k = st.p.join(","); keys.set(k, (keys.get(k) ?? "") + st.c); }
     this.state.forEach((st, i) => {
       const el = this.stickers[i];
+      const key = [...keys.get(st.p.join(","))].sort().join("");
+      const visible = key.length === 1 || !this.show || this.show(st, key) || pieces.has(st.p.join(","));
       el.style.transform = this.stickerTransform(st.p, st.n);
-      el.style.setProperty("--c", COLOR[st.c]);
+      el.style.setProperty("--c", visible ? COLOR[st.c] : GREY);
       el.classList.toggle("hl", pieces.has(st.p.join(",")));
       el.dataset.p = st.p.join(",");
     });
@@ -147,14 +154,22 @@ export class CubeView {
     this.arrow.hidden = false;
   }
 
-  /** Animates a turn of the fixed cube, then shows `next` (the state after it). */
-  async animateMove(fixedToken, next, ms = 500) {
-    const m = parseMove(fixedToken);
-    const quarters = m.q * m.amount;
+  /** Animates a layer turn, then shows `next` (the state after it). */
+  animateMove(token, next, ms = 500) {
+    const m = parseMove(token);
+    return this.animateTurn(m.axis, m.q * m.amount, (p) => p[m.axis] === m.layer, next, ms);
+  }
+
+  /** Animates a turn of the whole cube in the hand (axis, quarter turns as in rot()). */
+  animateCube(axis, quarters, next, ms = 700) {
+    return this.animateTurn(axis, quarters, () => true, next, ms);
+  }
+
+  async animateTurn(axis, quarters, inLayer, next, ms) {
+    const m = { axis };
     const angle = 90 * quarters;
     const css = ["rotateX", "rotateY", "rotateZ"][m.axis];
     const deg = m.axis === 1 ? angle : -angle;
-    const inLayer = (p) => p[m.axis] === m.layer;
     const moving = [
       ...this.cubies.filter((c) => inLayer(c.p)).map((c) => c.el),
       ...this.stickers.filter((el) => inLayer(el.dataset.p.split(",").map(Number))),
@@ -172,6 +187,15 @@ export class CubeView {
     this.pivot.style.transition = "none";
     this.pivot.style.transform = "none";
     this.setState(next, [...this.highlight]);
+  }
+
+  /** Shows the turn again without changing anything. */
+  async replayMove(token, ms = 600) {
+    if (!this.state) return;
+    const before = this.state;
+    await this.animateMove(token, applyMove(before, token), ms);
+    await wait(350);
+    this.setState(before, [...this.highlight]);
   }
 }
 

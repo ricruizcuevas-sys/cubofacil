@@ -1,45 +1,35 @@
-// How every turn is said in Spanish, with no letters or notation: the person holds the cube with
-// one side in front and yellow up.
-import { COLOR_NAME, FACE_COLOR, SIDES } from "./cube.js";
+// How each turn is said, always looking at the cube from the front (as in the printed guide).
+import { COLOR_NAME } from "./cube.js";
 
-const TEXT = {
-  R: ["Derecha arriba", "Gira la cara de la derecha hacia arriba"],
-  "R'": ["Derecha abajo", "Gira la cara de la derecha hacia abajo"],
-  L: ["Izquierda abajo", "Gira la cara de la izquierda hacia abajo"],
-  "L'": ["Izquierda arriba", "Gira la cara de la izquierda hacia arriba"],
-  U: ["Arriba a la izquierda", "Gira la capa de arriba hacia la izquierda"],
-  "U'": ["Arriba a la derecha", "Gira la capa de arriba hacia la derecha"],
-  D: ["Abajo a la derecha", "Gira la capa de abajo hacia la derecha"],
-  "D'": ["Abajo a la izquierda", "Gira la capa de abajo hacia la izquierda"],
-  F: ["Delante, como el reloj", "Gira la cara de delante como las agujas del reloj"],
-  "F'": ["Delante, al revés del reloj", "Gira la cara de delante al revés que las agujas del reloj"],
-  B: ["Atrás, arriba a la izquierda", "Gira la cara de atrás: su fila de arriba va hacia la izquierda"],
-  "B'": ["Atrás, arriba a la derecha", "Gira la cara de atrás: su fila de arriba va hacia la derecha"],
+export const WORD = {
+  R: "La derecha, hacia arriba", "R'": "La derecha, hacia abajo", R2: "La derecha, media vuelta (dos giros)",
+  L: "La izquierda, hacia abajo", "L'": "La izquierda, hacia arriba", L2: "La izquierda, media vuelta (dos giros)",
+  U: "La de arriba, hacia la izquierda", "U'": "La de arriba, hacia la derecha", U2: "La de arriba, media vuelta (dos giros)",
+  D: "La de abajo, hacia la derecha", "D'": "La de abajo, hacia la izquierda", D2: "La de abajo, media vuelta (dos giros)",
+  F: "La de delante, como las agujas del reloj", "F'": "La de delante, al revés que las agujas del reloj", F2: "La de delante, media vuelta (dos giros)",
 };
 
-const TWICE = {
-  R: "Gira la cara de la derecha dos veces (media vuelta)",
-  L: "Gira la cara de la izquierda dos veces (media vuelta)",
-  U: "Gira la capa de arriba dos veces (media vuelta)",
-  D: "Gira la capa de abajo dos veces (media vuelta)",
-  F: "Gira la cara de delante dos veces (media vuelta)",
-  B: "Gira la cara de atrás dos veces (media vuelta)",
+/** Turns of the whole cube in the hand (no layer moves). */
+export const CUBE_WORD = {
+  y: "Gira el cubo entero hacia la izquierda: lo de la derecha pasa delante",
+  "y'": "Gira el cubo entero hacia la derecha: lo de la izquierda pasa delante",
+  y2: "Gira el cubo entero media vuelta: lo de detrás pasa delante",
+  x: "Vuelca el cubo hacia atrás: lo de delante pasa arriba",
+  "x'": "Vuelca el cubo hacia ti: lo de arriba pasa delante",
+  x2: "Dale la vuelta al cubo de delante hacia atrás: lo de arriba pasa abajo",
+  z: "Tumba el cubo hacia la derecha: lo de la izquierda pasa arriba",
+  "z'": "Tumba el cubo hacia la izquierda: lo de la derecha pasa arriba",
+  z2: "Dale la vuelta al cubo de lado: lo de arriba pasa abajo",
 };
 
-const SHORT_TWICE = { R: "Derecha, dos veces", L: "Izquierda, dos veces", U: "Arriba, dos veces", D: "Abajo, dos veces", F: "Delante, dos veces", B: "Atrás, dos veces" };
-
-/** { short, long } words for a turn as the person sees it. */
-export function describe(token) {
-  if (token.endsWith("2")) return { short: SHORT_TWICE[token[0]], long: TWICE[token[0]] };
-  const [short, long] = TEXT[token];
-  return { short, long };
+/** «blanca, verde y roja» for a piece given by its colours (white and yellow first). */
+export function pieceName(colors) {
+  const order = "WYGBOR";
+  const names = [...colors].sort((a, b) => order.indexOf(a) - order.indexOf(b)).map((c) => COLOR_NAME[c]);
+  return names.length > 1 ? names.slice(0, -1).join(", ") + " y " + names[names.length - 1] : names[0];
 }
 
-/** «verde», «naranja»… of the side in front for a frame. */
-export const frontColorName = (frame) => COLOR_NAME[FACE_COLOR[SIDES[frame]]];
-
-export const holdText = (frame) =>
-  `Gira el cubo entero para que la cara ${frontColorName(frame)} quede delante, con el amarillo arriba y el blanco abajo.`;
-
-/** An algorithm in words: «Derecha arriba · Arriba a la izquierda · …». */
-export const algWords = (moves) => moves.map((m) => describe(m).short).join(" · ");
+const MASC = { W: "blanco", Y: "amarillo", G: "verde", B: "azul", O: "naranja", R: "rojo" };
+/** «el centro verde». */
+export const centreName = (c) => `el centro ${MASC[c]}`;
+export const colorWord = (c) => MASC[c];

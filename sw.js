@@ -1,6 +1,6 @@
 // Keeps CuboFácil working without internet once it has been opened.
-const CACHE = "cubofacil-v1";
-const FILES = ["./", "index.html", "styles.css", "icon.svg", "manifest.webmanifest", "js/app.js", "js/cube.js", "js/solver.js", "js/lessons.js", "js/words.js", "js/view.js"];
+const CACHE = "cubofacil-v2";
+const FILES = ["./", "index.html", "styles.css", "icon.svg", "manifest.webmanifest", "js/app.js", "js/cube.js", "js/guided.js", "js/draw.js", "js/photo.js", "js/validate.js", "js/words.js", "js/view.js", "guia/CuboFacil-guia.pdf"];
 
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) => e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
