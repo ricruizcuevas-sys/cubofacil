@@ -29,6 +29,12 @@ Además:
 - un cubo resuelto de principio a fin;
 - una chuleta con todos los algoritmos.
 
+## Guía en PDF
+
+[guia/CuboFacil-guia.pdf](guia/CuboFacil-guia.pdf): los 7 pasos para imprimir. Cada giro va con su dibujo y su explicación.
+
+Los dibujos salen del mismo modelo del cubo que usa la app, y cada ejemplo se comprueba al generar la guía. Para regenerarla: `node guia/build.mjs` crea `guia/guia.html`, y después se imprime a PDF en A4.
+
 ## Cómo funciona por dentro
 
 - `js/cube.js`: el modelo del cubo (54 pegatinas con su posición, orientación y color) y los giros.
