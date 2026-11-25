@@ -30,8 +30,9 @@ Además:
 7. Girar las esquinas amarillas
 
 Además:
-- un cubo resuelto de principio a fin;
-- una chuleta con todos los algoritmos.
+- un cubo mezclado al azar, de principio a fin;
+- una página con los 12 giros dibujados;
+- la chuleta con todos los algoritmos, en la última hoja de la guía.
 
 ## Guía en PDF
 
